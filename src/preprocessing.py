@@ -78,7 +78,7 @@ class Preprocessing:
         self.train_data = pd.DataFrame(X_resampled, columns=X_train.columns)
         self.train_data[self.target_column] = y_resampled
 
-    def preprocess(self):
+    def preprocess_data(self):
         """
         Executes the complete preprocessing pipeline including:
         - Dropping unnecessary columns
