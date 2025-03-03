@@ -77,6 +77,15 @@ class Preprocessing:
 
         self.train_data = pd.DataFrame(X_resampled, columns=X_train.columns)
         self.train_data[self.target_column] = y_resampled
+    
+    def scale_features(self):
+        """
+        Standardizes numerical features using StandardScaler.
+        """
+        scaler = StandardScaler()
+        self.train_data[NUMERICAL_COLUMNS] = scaler.fit_transform(self.train_data[NUMERICAL_COLUMNS])
+        self.test_data[NUMERICAL_COLUMNS] = scaler.transform(self.test_data[NUMERICAL_COLUMNS])
+
 
     def preprocess_data(self):
         """
@@ -86,9 +95,11 @@ class Preprocessing:
         - Encoding categorical columns
         - Applying log transformation
         - Applying SMOTE
+        - Scaling numerical features
         """
         self.drop_columns()
         self.handle_missing_values()
         self.encode_categorical_columns()
         self.transform_data()
         self.apply_smote()
+        self.scale_features() 
