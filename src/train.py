@@ -4,10 +4,10 @@ from sklearn.ensemble import RandomForestClassifier
 import optuna
 
 class TrainModel:
-    def __init__(self, X_train, y_train, best_params=None):
+    def __init__(self, X_train, y_train):
         self.X_train = X_train
         self.y_train = y_train
-        self.best_params = best_params if best_params else self._optimize_hyperparameters()
+        self.best_params = self._optimize_hyperparameters()
 
     def _optimize_hyperparameters(self):
         """Optuna hyperparameter optimization."""

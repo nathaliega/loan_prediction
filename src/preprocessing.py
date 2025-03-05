@@ -4,7 +4,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import LabelEncoder, FunctionTransformer
 from sklearn.impute import SimpleImputer
 from imblearn.over_sampling import SMOTE
-from .constants import CATEGORICAL_COLUMNS, NUMERICAL_COLUMNS
+from src.constants import NUMERICAL_COLUMNS, CATEGORICAL_COLUMNS
 
 class Preprocessing:
     """Handles preprocessing of training and testing datasets."""
