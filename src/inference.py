@@ -7,4 +7,5 @@ class InferenceModel:
 
     def predict(self, X):
         """Make predictions on the given unseen data."""
-        return self.model.predict(X)
+        X['predictions'] = self.model.predict(X)  # Add predictions as a new column
+        return X

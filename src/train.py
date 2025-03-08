@@ -34,7 +34,7 @@ class TrainModel:
 
         # Run optimization
         study = optuna.create_study(direction="maximize")
-        study.optimize(objective, n_trials=10)
+        study.optimize(objective, n_trials=5)
         return study.best_params
 
     def optimize(self):
