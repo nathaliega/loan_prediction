@@ -4,7 +4,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import LabelEncoder, FunctionTransformer
 from sklearn.impute import SimpleImputer
 from imblearn.over_sampling import SMOTE
-from src.constants import NUMERICAL_COLUMNS, CATEGORICAL_COLUMNS
+from constants import NUMERICAL_COLS, CATEGORICAL_COLS
 
 class Preprocessing:
     """Handles preprocessing of training and testing datasets."""
@@ -36,19 +36,19 @@ class Preprocessing:
         are imputed using the most frequent value.
         """
         imputer = SimpleImputer(strategy='mean')
-        imputer.fit_transform(self.train_data[NUMERICAL_COLUMNS])
-        self.test_data[NUMERICAL_COLUMNS] = imputer.transform(self.test_data[NUMERICAL_COLUMNS])
+        self.train_data[NUMERICAL_COLS] = imputer.fit_transform(self.train_data[NUMERICAL_COLS])
+        self.test_data[NUMERICAL_COLS] = imputer.transform(self.test_data[NUMERICAL_COLS])
 
         imputer = SimpleImputer(strategy='most_frequent')
-        imputer.fit(self.train_data[CATEGORICAL_COLUMNS])
-        self.test_data[CATEGORICAL_COLUMNS] = imputer.transform(self.test_data[CATEGORICAL_COLUMNS])
+        self.train_data[CATEGORICAL_COLS] = imputer.fit_transform(self.train_data[CATEGORICAL_COLS])
+        self.test_data[CATEGORICAL_COLS] = imputer.transform(self.test_data[CATEGORICAL_COLS])
 
-    def encode_categorical_columns(self):
+    def encode_categorical_cols(self):
         """
         Encodes categorical columns using label encoding.
         """
         le = LabelEncoder()
-        for col in CATEGORICAL_COLUMNS:
+        for col in CATEGORICAL_COLS:
             self.train_data[col] = le.fit_transform(self.train_data[col])
             self.test_data[col] = le.transform(self.test_data[col])
 
@@ -83,8 +83,8 @@ class Preprocessing:
         Standardizes numerical features using StandardScaler.
         """
         scaler = StandardScaler()
-        self.train_data[NUMERICAL_COLUMNS] = scaler.fit_transform(self.train_data[NUMERICAL_COLUMNS])
-        self.test_data[NUMERICAL_COLUMNS] = scaler.transform(self.test_data[NUMERICAL_COLUMNS])
+        self.train_data[NUMERICAL_COLS] = scaler.fit_transform(self.train_data[NUMERICAL_COLS])
+        self.test_data[NUMERICAL_COLS] = scaler.transform(self.test_data[NUMERICAL_COLS])
 
 
     def preprocess_data(self):
@@ -99,7 +99,9 @@ class Preprocessing:
         """
         self.drop_columns()
         self.handle_missing_values()
-        self.encode_categorical_columns()
+        self.encode_categorical_cols()
         self.transform_data()
         self.apply_smote()
-        self.scale_features() 
+        self.scale_features()
+
+        return self.train_data, self.test_data

@@ -1,16 +1,17 @@
-import pandas as pd
 from src.load_data import load_data
 from src.preprocessing import Preprocessing
 from src.train import TrainModel
+from src.evaluate import Evaluation
 
-train, test = load_data('data/loan_data.csv')
+train, test = load_data('data/loan_data_set.csv')
 
-preprocessor = Preprocessing(train, test, 'Loan_Status')
-train_preprocessed, test_preprocessed = preprocessor.preprocess_data()
+data_prep = Preprocessing(train, test, target_column='Loan_Status')
+train, test = data_prep.preprocess_data()
 
-trainer = TrainModel(train_preprocessed, test_preprocessed, 'Loan_Status')
+trainer = TrainModel(train)
+trainer.optimize()
+model = trainer.train()
+trainer.save_model(model)
 
-model = trainer.train_model()
-trainer.save_model(model, 'models/model.pkl')
-
-
+evaluation = Evaluation(model_path='../models/model.pkl', test_data=test, output_path='../metrics/metrics.csv')
+evaluation.evaluate()

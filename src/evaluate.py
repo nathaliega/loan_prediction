@@ -1,9 +1,10 @@
 import joblib
 import pandas as pd
 from sklearn.metrics import classification_report, confusion_matrix
+from constants import TARGET
 
 class Evaluation:
-    def __init__(self, model_path, X_test, y_test, output_path):
+    def __init__(self, model_path, test_data, output_path):
         """
         Initializes the Evaluation class with the trained model and test data.
 
@@ -14,27 +15,19 @@ class Evaluation:
         - output_csv: str, path to save the evaluation metrics CSV (default is "evaluation_metrics.csv")
         """
         self.model = joblib.load(model_path)  
-        self.X_test = X_test
-        self.y_test = y_test
+        self.X_test = test_data.drop(columns=[TARGET])
+        self.y_test = test_data[TARGET]
         self.output_path = output_path  
 
-    def predict(self):
+    def _predict(self):
         """Make predictions on the test set."""
         return self.model.predict(self.X_test)
 
     def evaluate(self):
         """Evaluate the model on the test set and save metrics to CSV."""
-        y_pred = self.predict()
+        y_pred = self._predict()
 
         class_report = classification_report(self.y_test, y_pred, output_dict=True)
         class_report_df = pd.DataFrame(class_report).transpose()
 
-        class_report_df.to_csv(self.output_csv, mode='w', header=True)
-
-        conf_matrix = confusion_matrix(self.y_test, y_pred)
-        conf_matrix_df = pd.DataFrame(conf_matrix, columns=self.model.classes_, index=self.model.classes_)
-        
-        with open(self.output_csv, mode='a') as f:
-            f.write("\nConfusion Matrix:\n")
-        conf_matrix_df.to_csv(self.output_csv, mode='a', header=True)
-        
+        class_report_df.to_csv(self.output_path, mode='w', header=True)
