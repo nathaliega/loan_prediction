@@ -1,148 +1,128 @@
 import pandas as pd
 import numpy as np
-import joblib
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import LabelEncoder, FunctionTransformer
-from sklearn.impute import SimpleImputer
 from imblearn.over_sampling import SMOTE
 from constants import NUMERICAL_COLS, CATEGORICAL_COLS, TARGET
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OrdinalEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.utils.validation import check_is_fitted
+import pickle
+from imblearn.pipeline import Pipeline as ImbPipeline  #
 
-class Preprocessing:
-    """Handles preprocessing of training and testing datasets."""
+class ColumnDropper(BaseEstimator, TransformerMixin):
+    def __init__(self, columns_to_drop):
+        self.columns_to_drop = columns_to_drop
+
+    def fit(self, X, y=None):
+        self.fitted_ = True
+        return self
+
+    def transform(self, X):
+        check_is_fitted(self, 'fitted_')
+        return X.drop(columns=self.columns_to_drop)
+
+    def get_feature_names_out(self, input_features=None):
+        return [col for col in input_features if col not in self.columns_to_drop]
+
+
+class PreprocessingPipeline:
+    def __init__(self):
+        self._preprocessor = self._make_preprocessor()
+        self._target_pipeline = self._make_target_pipeline()
+
+
+    def preprocess_data(self, train_data, test_data):
+        """Applies transformations and SMOTE to training data, only transformations to test data."""
+        # Separate features and target columns
+        X_train = train_data.drop(columns=[TARGET])
+        y_train = train_data[TARGET]
+        X_test = test_data.drop(columns=[TARGET])
+        y_test = test_data[TARGET]
+
+        X_train = self._preprocessor.fit_transform(X_train)
+        X_test = self._preprocessor.transform(X_test)
+
+        y_train = self._target_pipeline.fit_transform(y_train.to_numpy().reshape(-1, 1))  # Convert to numpy and reshape
+        y_test = self._target_pipeline.transform(y_test.to_numpy().reshape(-1, 1))  # Convert to numpy and reshape
+
+        # Apply SMOTE for resampling (only on training data)
+        X_train, y_train = SMOTE().fit_resample(X_train, y_train)
+
+        print(X_train.columns)
+        # Update train_data with resampled y_train (SMOTE increases the number of samples)
+        processed_train_data = pd.concat([pd.DataFrame(X_train), pd.DataFrame(y_train, columns=[TARGET])], axis=1)
+
+        # Update test_data with transformed y_test (test data does not undergo SMOTE)
+        X_test[TARGET] = y_test
+
+        self.save('../params/preprocessing_pipeline.pkl')
+
+        return processed_train_data, X_test
     
-    def __init__(self, target_column: str = None, train_data: pd.DataFrame = None, test_data: pd.DataFrame = None, inference_data: pd.DataFrame = None):
-        """
-        Initializes the Preprocessing class with training and testing data.
-        
-        Args:
-            train_data (pd.DataFrame): The training dataset.
-            test_data (pd.DataFrame): The testing dataset.
-            target_column (str): The name of the target column.
-        """
-        self.train_data = train_data
-        self.test_data = test_data
-        self.target_column = target_column
-        self.inference_data = inference_data
+    def transform_for_inference(self, X, y = None):
+        loaded_pipeline = self.load('../params/preprocessing_pipeline.pkl')  # Load the fitted pipeline
+        X = loaded_pipeline._preprocessor.transform(X)  # Use the loaded (fitted) preprocessor
 
-        # Initialize transformers
-        self.imputer_num = SimpleImputer(strategy='mean')
-        self.imputer_cat = SimpleImputer(strategy='most_frequent')
-        self.label_encoders = {}
-        self.scaler = StandardScaler()
-
-    def drop_columns(self):
-        """
-        Drops unnecessary columns from the datasets.
-        """
-        self.train_data = self.train_data.drop(columns=['Loan_ID'], axis=1)
-        self.test_data = self.test_data.drop(columns=['Loan_ID'], axis=1)
-
-    def handle_missing_values(self):
-        """
-        Handles missing values in numerical and categorical columns.
-        Numerical columns are imputed using the mean, and categorical columns
-        are imputed using the most frequent value.
-        """
-        self.imputer_num.fit(self.train_data[NUMERICAL_COLS])
-        self.train_data[NUMERICAL_COLS] = self.imputer_num.transform(self.train_data[NUMERICAL_COLS])
-        self.test_data[NUMERICAL_COLS] = self.imputer_num.transform(self.test_data[NUMERICAL_COLS])
-
-        self.train_data[TARGET] = self.imputer_cat.fit_transform(self.train_data[[TARGET]]).ravel()
-        self.test_data[TARGET] = self.imputer_cat.transform(self.test_data[[TARGET]]).ravel()
-
-        self.imputer_cat.fit(self.train_data[CATEGORICAL_COLS])
-        self.train_data[CATEGORICAL_COLS] = self.imputer_cat.transform(self.train_data[CATEGORICAL_COLS])
-        self.test_data[CATEGORICAL_COLS] = self.imputer_cat.transform(self.test_data[CATEGORICAL_COLS])
+        if y is not None:
+            y = loaded_pipeline._target_pipeline.transform(y)  # Use the loaded (fitted) target pipeline
+            return X, y
+        return X
 
 
-    def encode_categorical_cols(self):
-        """
-        Encodes categorical columns using label encoding.
-        """
-        le = LabelEncoder()
-
-        self.train_data[TARGET] = le.fit_transform(self.train_data[[TARGET]])
-        self.test_data[TARGET] = le.transform(self.test_data[[TARGET]])
-
-        # for col in CATEGORICAL_COLS:
-        #     self.train_data[col] = le.fit_transform(self.train_data[col])
-        #     self.test_data[col] = le.transform(self.test_data[col])
-        for col in CATEGORICAL_COLS:
-            le = LabelEncoder()
-            self.train_data[col] = le.fit_transform(self.train_data[col])
-            self.test_data[col] = le.transform(self.test_data[col])
-            self.label_encoders[col] = le
+    def save(self, path):
+        with open(path, "wb") as f:
+            pickle.dump(self, f)
 
 
-    def apply_smote(self):
-        """
-        Applies Synthetic Minority Over-sampling Technique (SMOTE) to balance
-        the training dataset.
-        """
-        smote = SMOTE(random_state=42)
-        
-        X_train = self.train_data.drop(columns=[self.target_column])
-        y_train = self.train_data[self.target_column]
-        
-        X_resampled, y_resampled = smote.fit_resample(X_train, y_train)
+    @staticmethod
+    def load(path):
+        with open(path, "rb") as f:
+            return pickle.load(f)
 
-        self.train_data = pd.DataFrame(X_resampled, columns=X_train.columns)
-        self.train_data[self.target_column] = y_resampled
+
+    def _make_preprocessor(self):
+        num_pipeline = Pipeline(
+            steps=[
+                ("imputer", SimpleImputer(strategy="mean")),
+                ("scaler", StandardScaler()),
+            ]
+        )
+
+        cat_pipeline = Pipeline(
+            steps=[
+                ("imputer", SimpleImputer(strategy="most_frequent")),
+                ("encoder", OrdinalEncoder()),
+            ]
+        )
+
+        ct = ColumnTransformer(
+            transformers=[
+                ("num", num_pipeline, NUMERICAL_COLS),
+                ("cat", cat_pipeline, CATEGORICAL_COLS),
+            ],
+            remainder="passthrough",
+            verbose_feature_names_out=False,
+            n_jobs=-1,
+        )
+
+        preprocessor = Pipeline(
+            steps=[
+                ("ct", ct),
+                ("dropper", ColumnDropper(columns_to_drop=["Loan_ID"])),
+            ]
+        )
+        preprocessor.set_output(transform="pandas")
+
+        return preprocessor
+
+
+    def _make_target_pipeline(self):
+        return Pipeline(
+            steps=[
+                ("imputer", SimpleImputer(strategy="most_frequent")),
+                ("encoder", OrdinalEncoder()),
+            ]
+        )
     
-    def scale_features(self):
-        """
-        Standardizes numerical features using StandardScaler.
-        """
-        self.scaler.fit(self.train_data[NUMERICAL_COLS])
-        self.train_data[NUMERICAL_COLS] = self.scaler.transform(self.train_data[NUMERICAL_COLS])
-        self.test_data[NUMERICAL_COLS] = self.scaler.transform(self.test_data[NUMERICAL_COLS])
-
-
-    def preprocess_data(self):
-        """
-        Executes the complete preprocessing pipeline including:
-        - Dropping unnecessary columns
-        - Handling missing values
-        - Encoding categorical columns
-        - Applying log transformation
-        - Applying SMOTE
-        - Scaling numerical features
-        """
-        self.drop_columns()
-        self.handle_missing_values()
-        self.encode_categorical_cols()
-        self.apply_smote()
-        self.scale_features()
-
-        # Save preprocessing parameters
-        joblib.dump(self.imputer_num, "../params/imputer_num.pkl")
-        joblib.dump(self.imputer_cat, "../params/imputer_cat.pkl")
-        joblib.dump(self.label_encoders, "../params/label_encoders.pkl")
-        joblib.dump(self.scaler, "../params/scaler.pkl")
-
-        return self.train_data, self.test_data
-    
-    def preprocess_for_inference(self):
-        """
-        Preprocesses new data for inference using saved transformation parameters.
-        """
-        # Load preprocessing parameters
-        imputer_num = joblib.load("../params/imputer_num.pkl")
-        imputer_cat = joblib.load("../params/imputer_cat.pkl")
-        label_encoders = joblib.load("../params/label_encoders.pkl")
-        scaler = joblib.load("../params/scaler.pkl")
-        
-        self.inference_data = self.inference_data.drop(columns=['Loan_ID'])
-
-        # Handle missing values
-        self.inference_data[NUMERICAL_COLS] = imputer_num.transform(self.inference_data[NUMERICAL_COLS])
-        self.inference_data[CATEGORICAL_COLS] = imputer_cat.transform(self.inference_data[CATEGORICAL_COLS])
-        
-        # Encode categorical columns
-        for col in CATEGORICAL_COLS:
-            self.inference_data[col] = label_encoders[col].transform(self.inference_data[col])
-        
-        # Scale numerical features
-        self.inference_data[NUMERICAL_COLS] = scaler.transform(self.inference_data[NUMERICAL_COLS])
-        
-        return self.inference_data

@@ -7,5 +7,6 @@ class InferenceModel:
 
     def predict(self, X):
         """Make predictions on the given unseen data."""
-        X['predictions'] = self.model.predict(X)  # Add predictions as a new column
+        X['predictions'] = self.model.predict(X)  
+        X.to_csv('../predictions/predictions.csv', index=False)  
         return X

@@ -4,6 +4,7 @@ from sklearn.ensemble import RandomForestClassifier
 import optuna
 from constants import TARGET
 
+
 class TrainModel:
     def __init__(self, train_data):
         self.X_train = train_data.drop(columns=[TARGET])

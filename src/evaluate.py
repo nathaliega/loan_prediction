@@ -3,6 +3,8 @@ import pandas as pd
 from sklearn.metrics import classification_report, confusion_matrix
 from constants import TARGET
 
+
+# TODO rename classes from for ex. Evaluation to Evaluator / EvaluationPipeline etc, Infrenece same
 class Evaluation:
     def __init__(self, model_path, test_data, output_path):
         """
@@ -14,10 +16,10 @@ class Evaluation:
         - y_test: DataFrame or ndarray, true labels for the test set
         - output_csv: str, path to save the evaluation metrics CSV (default is "evaluation_metrics.csv")
         """
-        self.model = joblib.load(model_path)  
+        self.model = joblib.load(model_path)
         self.X_test = test_data.drop(columns=[TARGET])
         self.y_test = test_data[TARGET]
-        self.output_path = output_path  
+        self.output_path = output_path
 
     def _predict(self):
         """Make predictions on the test set."""
@@ -30,4 +32,4 @@ class Evaluation:
         class_report = classification_report(self.y_test, y_pred, output_dict=True)
         class_report_df = pd.DataFrame(class_report).transpose()
 
-        class_report_df.to_csv(self.output_path, mode='w', header=True)
+        class_report_df.to_csv(self.output_path, mode="w", header=True)

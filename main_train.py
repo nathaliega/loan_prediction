@@ -1,12 +1,13 @@
 from src.load_data import load_data
-from src.preprocessing import Preprocessing
+from src.preprocessing import PreprocessingPipeline
 from src.train import TrainModel
 from src.evaluate import Evaluation
 
+
 train, test = load_data('data/loan_data_set.csv')
 
-data_prep = Preprocessing(train, test, target_column='Loan_Status')
-train, test = data_prep.preprocess_data()
+pipeline = PreprocessingPipeline()
+train, test = pipeline.preprocess_data(train_data=train, test_data=test)
 
 trainer = TrainModel(train)
 trainer.optimize()

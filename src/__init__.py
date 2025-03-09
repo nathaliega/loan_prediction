@@ -1,1 +1,3 @@
-"""Source code module."""
+from .log import setup_logging
+
+setup_logging()
