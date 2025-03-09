@@ -40,7 +40,7 @@ def setup_logging() -> None:
             if root_logger.hasHandlers():
                 root_logger.handlers.clear()  # Remove all existing handlers
 
-            logging.config.dictConfig(conf)
+            # logging.config.dictConfig(conf)
 
         except yaml.YAMLError as exc:
             logging.error(exc)

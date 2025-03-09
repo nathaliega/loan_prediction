@@ -2,17 +2,31 @@ import joblib
 from sklearn.model_selection import cross_val_score
 from sklearn.ensemble import RandomForestClassifier
 import optuna
-from constants import TARGET
+from src.constants import TARGET
+import pandas as pd
 
 
-class TrainModel:
-    def __init__(self, train_data):
+class ModelTrainer:
+    """A class for training a machine learning model with hyperparameter optimization."""
+
+    def __init__(self, train_data: pd.DataFrame) -> None:
+        """
+        Initializes the ModelTrainer with training data.
+
+        Args:
+            train_data (pd.DataFrame): The DataFrame containing the training data, including features and target.
+        """
         self.X_train = train_data.drop(columns=[TARGET])
         self.y_train = train_data[TARGET]
-        self.best_params = None  # Initialize as None, will be set after optimization
+        self.best_params = None  
 
     def _optimize_hyperparameters(self):
-        """Optuna hyperparameter optimization."""
+        """
+        Perform hyperparameter optimization using Optuna.
+
+        Returns:
+            Dict[str, int]: The best hyperparameters found during optimization.
+        """
         def objective(trial):
             # Hyperparameter search space
             n_estimators = trial.suggest_int("n_estimators", 50, 300)
@@ -38,19 +52,37 @@ class TrainModel:
         study.optimize(objective, n_trials=5)
         return study.best_params
 
-    def optimize(self):
-        """Run the hyperparameter optimization explicitly."""
+    def optimize(self) -> None:
+        """
+        Run the hyperparameter optimization process and store the best parameters.
+
+        This method will set the `best_params` attribute of the class.
+        """
         self.best_params = self._optimize_hyperparameters()
 
     def train(self):
-        """Train the model on the entire training dataset."""
+        """
+        Train the model on the entire training dataset using the optimized hyperparameters.
+
+        Returns:
+            RandomForestClassifier: The trained RandomForestClassifier model.
+
+        Raises:
+            ValueError: If the model has not been optimized yet.
+        """
         if self.best_params is None:
             raise ValueError("Model has not been optimized yet. Please run optimize() first.")
         model = RandomForestClassifier(**self.best_params, random_state=42)
         model.fit(self.X_train, self.y_train)
         return model
 
-    def save_model(self, model, model_path='../models/model.pkl'):
-        """Save the trained model to a file."""
+    def save_model(self, model: RandomForestClassifier, model_path: str = 'models/model.pkl'):
+        """
+        Save the trained model to a file.
+
+        Args:
+            model (RandomForestClassifier): The trained model to be saved.
+            model_path (str, optional): The path where the model will be saved. Defaults to 'models/model.pkl'.
+        """
         joblib.dump(model, model_path)
         print(f"Model saved to {model_path}")

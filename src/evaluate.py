@@ -1,35 +1,35 @@
 import joblib
 import pandas as pd
-from sklearn.metrics import classification_report, confusion_matrix
-from constants import TARGET
+from sklearn.metrics import classification_report
+from src.constants import TARGET
 
 
-# TODO rename classes from for ex. Evaluation to Evaluator / EvaluationPipeline etc, Infrenece same
-class Evaluation:
-    def __init__(self, model_path, test_data, output_path):
-        """
-        Initializes the Evaluation class with the trained model and test data.
+def evaluate_model(model_path: str, test_data: pd.DataFrame, output_path: str):
+    """
+    Loads a trained model, makes predictions on test data, evaluates performance,
+    and saves the evaluation metrics to a CSV file.
 
-        Parameters:
-        - model_path: str, path to the trained model (e.g., a .pkl file)
-        - X_test: DataFrame or ndarray, test features
-        - y_test: DataFrame or ndarray, true labels for the test set
-        - output_csv: str, path to save the evaluation metrics CSV (default is "evaluation_metrics.csv")
-        """
-        self.model = joblib.load(model_path)
-        self.X_test = test_data.drop(columns=[TARGET])
-        self.y_test = test_data[TARGET]
-        self.output_path = output_path
-
-    def _predict(self):
-        """Make predictions on the test set."""
-        return self.model.predict(self.X_test)
-
-    def evaluate(self):
-        """Evaluate the model on the test set and save metrics to CSV."""
-        y_pred = self._predict()
-
-        class_report = classification_report(self.y_test, y_pred, output_dict=True)
-        class_report_df = pd.DataFrame(class_report).transpose()
-
-        class_report_df.to_csv(self.output_path, mode="w", header=True)
+    Parameters:
+    - model_path: str, path to the trained model (e.g., a .pkl file)
+    - test_data: DataFrame, test dataset including features and target column
+    - output_path: str, path to save the evaluation metrics CSV
+    - target_column: str, the name of the target column in test_data
+    """
+    # Load the trained model
+    model = joblib.load(model_path)
+    
+    # Split features and target
+    X_test = test_data.drop(columns=[TARGET])
+    y_test = test_data[TARGET]
+    
+    # Make predictions
+    y_pred = model.predict(X_test)
+    
+    # Generate classification report
+    class_report = classification_report(y_test, y_pred, output_dict=True)
+    class_report_df = pd.DataFrame(class_report).transpose()
+    
+    # Save to CSV
+    class_report_df.to_csv(output_path, mode="w", header=True)
+    
+    return class_report_df
