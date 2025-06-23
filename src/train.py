@@ -85,4 +85,3 @@ class ModelTrainer:
             model_path (str, optional): The path where the model will be saved. Defaults to 'models/model.pkl'.
         """
         joblib.dump(model, model_path)
-        print(f"Model saved to {model_path}")
